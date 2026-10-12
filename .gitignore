@@ -1,0 +1,25 @@
+# Unity generated files
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# IDE and editor files
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.user
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+*.svclog
+*.pdb
+
+# OS files
+.DS_Store
+Thumbs.db
