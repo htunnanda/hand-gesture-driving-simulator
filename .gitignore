@@ -1,4 +1,35 @@
-# Unity generated files
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Secrets/local settings
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Generated / private data
+ai-dataset/data/
+machine-learning/models/*.pkl
+machine-learning/models/*.joblib
+machine-learning/models/*.onnx
+*.mp4
+*.avi
+*.mov
+
+# Unity legacy generated files
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
@@ -6,10 +37,6 @@
 [Bb]uilds/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
-
-# IDE and editor files
-.vs/
-.vscode/
 *.csproj
 *.sln
 *.user
@@ -20,6 +47,9 @@
 *.svclog
 *.pdb
 
-# OS files
+# IDE / OS
+.vs/
+.vscode/
+.idea/
 .DS_Store
 Thumbs.db
