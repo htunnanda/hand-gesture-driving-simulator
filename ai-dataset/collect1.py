@@ -1,0 +1,166 @@
+
+import cv2
+import mediapipe as mp
+import time
+from pathlib import Path
+
+# Gesture labels
+GESTURES = {
+    ord("1"): "palm",
+    ord("2"): "fist",
+    ord("3"): "left",
+    ord("4"): "right"
+}
+
+# Save images in ai-dataset
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASET_DIR = PROJECT_ROOT / "ai-dataset" / "dataset" / "raw"
+
+for gesture in GESTURES.values():
+    (DATASET_DIR / gesture).mkdir(parents=True, exist_ok=True)
+
+# MediaPipe Hand Detection
+mp_hands = mp.solutions.hands
+
+hands = mp_hands.Hands(
+    static_image_mode=False,
+    max_num_hands=1,
+    min_detection_confidence=0.6,
+    min_tracking_confidence=0.5
+)
+
+# Open webcam
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    raise RuntimeError("Cannot open webcam")
+
+current_gesture = "palm"
+padding = 30
+image_size = 224
+saved_count = 0
+
+while True:
+    success, frame = cap.read()
+
+    if not success:
+        break
+
+    # Mirror webcam for easier control
+    frame = cv2.flip(frame, 1)
+    height, width = frame.shape[:2]
+
+    # Convert BGR to RGB
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    results = hands.process(rgb)
+
+    display = frame.copy()
+    cropped_hand = None
+
+    if results.multi_hand_landmarks:
+        hand_landmarks = results.multi_hand_landmarks[0]
+
+        # Get all hand landmark coordinates
+        x_points = []
+        y_points = []
+
+        for landmark in hand_landmarks.landmark:
+            x_points.append(int(landmark.x * width))
+            y_points.append(int(landmark.y * height))
+
+        # Bounding box coordinates
+        x_min = max(0, min(x_points) - padding)
+        y_min = max(0, min(y_points) - padding)
+        x_max = min(width, max(x_points) + padding)
+        y_max = min(height, max(y_points) + padding)
+
+        if x_max > x_min and y_max > y_min:
+            # Crop only hand region
+            cropped_hand = frame[y_min:y_max, x_min:x_max]
+
+            # Draw green rectangle
+            cv2.rectangle(
+                display,
+                (x_min, y_min),
+                (x_max, y_max),
+                (0, 255, 0),
+                2
+            )
+
+            # Show hand crop preview
+            if cropped_hand.size > 0:
+                preview = cv2.resize(
+                    cropped_hand,
+                    (image_size, image_size)
+                )
+                cv2.imshow("Hand Crop Preview", preview)
+
+    # Display instructions
+    cv2.putText(
+        display,
+        f"Gesture: {current_gesture}",
+        (20, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (0, 255, 0),
+        2
+    )
+
+    cv2.putText(
+        display,
+        "1:Palm 2:Fist 3:Left 4:Right",
+        (20, 75),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (255, 255, 255),
+        2
+    )
+
+    cv2.putText(
+        display,
+        "S: Save Crop | Q: Quit",
+        (20, 105),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.55,
+        (255, 255, 255),
+        2
+    )
+
+    cv2.imshow("Hand Gesture Dataset Collection", display)
+
+    key = cv2.waitKey(1) & 0xFF
+
+    if key == ord("q"):
+        break
+
+    if key in GESTURES:
+        current_gesture = GESTURES[key]
+        print("Selected:", current_gesture)
+
+    if key == ord("s"):
+        if cropped_hand is not None and cropped_hand.size > 0:
+            # Resize hand crop for training
+            saved_image = cv2.resize(
+                cropped_hand,
+                (image_size, image_size)
+            )
+
+            filename = (
+                DATASET_DIR
+                / current_gesture
+                / f"{time.time_ns()}.jpg"
+            )
+
+            cv2.imwrite(str(filename), saved_image)
+            saved_count += 1
+
+            print(f"Saved [{saved_count}]: {filename}")
+        else:
+            print("No hand detected. Image not saved.")
+
+cap.release()
+hands.close()
+cv2.destroyAllWindows()
+
+print("Total images saved:", saved_count)
