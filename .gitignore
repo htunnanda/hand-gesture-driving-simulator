@@ -1,55 +1,29 @@
 # Python
-__pycache__/
-*.py[cod]
 .venv/
-venv/
-env/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-build/
-dist/
-*.egg-info/
+__pycache__/
+*.pyc
 
-# Secrets/local settings
-.env
-.env.*
-!.env.example
-*.key
-*.pem
+# Ignore dataset images but keep folder structure
+ai-dataset/dataset/raw/*
+!ai-dataset/dataset/raw/palm/
+!ai-dataset/dataset/raw/fist/
+!ai-dataset/dataset/raw/left/
+!ai-dataset/dataset/raw/right/
 
-# Generated / private data
-ai-dataset/data/
-machine-learning/models/*.pkl
-machine-learning/models/*.joblib
-machine-learning/models/*.onnx
-*.mp4
-*.avi
-*.mov
+ai-dataset/dataset/raw/palm/*
+!ai-dataset/dataset/raw/palm/.gitkeep
 
-# Unity legacy generated files
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-[Uu]ser[Ss]ettings/
-*.csproj
-*.sln
-*.user
-*.suo
-*.userprefs
-*.pidb
-*.booproj
-*.svclog
-*.pdb
+ai-dataset/dataset/raw/fist/*
+!ai-dataset/dataset/raw/fist/.gitkeep
 
-# IDE / OS
-.vs/
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+ai-dataset/dataset/raw/left/*
+!ai-dataset/dataset/raw/left/.gitkeep
+
+ai-dataset/dataset/raw/right/*
+!ai-dataset/dataset/raw/right/.gitkeep
+
+ai-dataset/dataset/webcam/*
+!ai-dataset/dataset/webcam/.gitkeep
+
+ai-dataset/dataset/downloads/*
+!ai-dataset/dataset/downloads/.gitkeep
