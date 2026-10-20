@@ -3,27 +3,5 @@
 __pycache__/
 *.pyc
 
-# Ignore dataset images but keep folder structure
-ai-dataset/dataset/raw/*
-!ai-dataset/dataset/raw/palm/
-!ai-dataset/dataset/raw/fist/
-!ai-dataset/dataset/raw/left/
-!ai-dataset/dataset/raw/right/
-
-ai-dataset/dataset/raw/palm/*
-!ai-dataset/dataset/raw/palm/.gitkeep
-
-ai-dataset/dataset/raw/fist/*
-!ai-dataset/dataset/raw/fist/.gitkeep
-
-ai-dataset/dataset/raw/left/*
-!ai-dataset/dataset/raw/left/.gitkeep
-
-ai-dataset/dataset/raw/right/*
-!ai-dataset/dataset/raw/right/.gitkeep
-
-ai-dataset/dataset/webcam/*
-!ai-dataset/dataset/webcam/.gitkeep
-
-ai-dataset/dataset/downloads/*
-!ai-dataset/dataset/downloads/.gitkeep
+# Downloaded datasets
+ai-dataset/dataset/downloads/
