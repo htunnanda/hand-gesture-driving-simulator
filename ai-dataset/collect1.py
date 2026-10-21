@@ -13,8 +13,10 @@ GESTURES = {
 }
 
 # Save images in ai-dataset
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATASET_DIR = PROJECT_ROOT / "ai-dataset" / "dataset" / "raw"
+
+print("Saving images to:", DATASET_DIR)
 
 for gesture in GESTURES.values():
     (DATASET_DIR / gesture).mkdir(parents=True, exist_ok=True)
