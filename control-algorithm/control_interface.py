@@ -36,6 +36,7 @@ class InferenceInput:
     confidence: float
     valid: bool
     timestamp: float
+    openness: float
 
 @dataclass
 class ControlCommand:
@@ -44,5 +45,6 @@ class ControlCommand:
     stop: bool
     valid: bool
     timestamp: float
-    
+
+
                     

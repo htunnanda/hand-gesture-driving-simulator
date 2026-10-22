@@ -26,3 +26,19 @@ def test_control_command_creation():
     assert command.stop is False
     assert command.valid is True
     assert command.timestamp == 1.0    
+
+def test_inference_input_creation():
+    inference = control_interface.InferenceInput(
+        gesture="OPEN_PALM",
+        confidence=0.95,
+        valid=True,
+        timestamp=1.0,
+        openness=0.85,
+    )
+
+    assert inference.gesture == "OPEN_PALM"
+    assert inference.confidence == 0.95
+    assert inference.valid is True
+    assert inference.timestamp == 1.0
+    assert inference.openness == 0.85
+
