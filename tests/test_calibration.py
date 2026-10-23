@@ -34,3 +34,9 @@ def test_calibration_result_average():
     assert result.neutral_x == 0.50
     assert result.closed_openness == pytest.approx(0.15)
     assert result.open_openness == 0.90
+
+def test_is_ready_with_fist():
+    calibrator = calibration.Calibrator()
+
+    assert calibrator.is_ready("FIST") is True
+    assert calibrator.is_ready("OPEN_PALM") is False

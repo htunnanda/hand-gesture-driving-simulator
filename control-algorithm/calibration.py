@@ -43,3 +43,6 @@ class Calibrator:
             open_openness=open_openness,
             valid=True,
         )
+    
+    def is_ready(self, gesture: str) -> bool:
+        return gesture == "FIST"
