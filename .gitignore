@@ -3,5 +3,13 @@
 __pycache__/
 *.pyc
 
-# Downloaded datasets
-ai-dataset/dataset/downloads/
+# Collected and downloaded datasets; keep placeholder files.
+**/dataset/raw/**
+!**/dataset/raw/**/
+!**/dataset/raw/**/.gitkeep
+**/dataset/webcam/**
+!**/dataset/webcam/**/
+!**/dataset/webcam/**/.gitkeep
+**/dataset/downloads/**
+!**/dataset/downloads/**/
+!**/dataset/downloads/**/.gitkeep
