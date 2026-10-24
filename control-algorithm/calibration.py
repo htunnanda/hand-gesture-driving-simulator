@@ -25,7 +25,11 @@ class Calibrator:
         self.open_samples.append(openness)
 
     def calculate_result(self) -> CalibrationResult:
-        if not self.neutral_samples or not self.closed_samples or not self.open_samples:
+        if (
+            not self.neutral_samples
+            or not self.closed_samples
+            or not self.open_samples
+        ):
             return CalibrationResult(
                 neutral_x=0.0,
                 closed_openness=0.0,
@@ -43,6 +47,15 @@ class Calibrator:
             open_openness=open_openness,
             valid=True,
         )
-    
+
     def is_ready(self, gesture: str) -> bool:
         return gesture == "FIST"
+
+    def needs_retry(self) -> bool:
+        result = self.calculate_result()
+        return not result.valid
+
+    def reset(self):
+        self.neutral_samples.clear()
+        self.closed_samples.clear()
+        self.open_samples.clear()

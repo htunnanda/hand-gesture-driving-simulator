@@ -40,3 +40,28 @@ def test_is_ready_with_fist():
 
     assert calibrator.is_ready("FIST") is True
     assert calibrator.is_ready("OPEN_PALM") is False
+
+def test_needs_retry():
+    calibrator = calibration.Calibrator()
+
+    assert calibrator.needs_retry() is True
+
+    calibrator.add_neutral_sample(0.5)
+    calibrator.add_closed_sample(0.1)
+    calibrator.add_open_sample(0.9)
+
+    assert calibrator.needs_retry() is False
+
+
+def test_reset():
+    calibrator = calibration.Calibrator()
+
+    calibrator.add_neutral_sample(0.5)
+    calibrator.add_closed_sample(0.1)
+    calibrator.add_open_sample(0.9)
+
+    calibrator.reset()
+
+    assert calibrator.neutral_samples == []
+    assert calibrator.closed_samples == []
+    assert calibrator.open_samples == []
