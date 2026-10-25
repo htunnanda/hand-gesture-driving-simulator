@@ -685,19 +685,31 @@ class DrivingScene:
         return True
 
     def update(self, dt: float, screen_size: tuple[int, int]) -> None:
-        if self.state is not GameState.PLAYING:
+        bounds = self.road.bounds(*screen_size)
+
+        # Animate lane changes even while stopped.
+        self.player.update(dt, bounds, self.road)
+
+        if self.state is not GameState.RUNNING:
             return
 
-        bounds = self.road.bounds(*screen_size)
         self.update_speed(dt)
 
         self.survival_time += dt
         self.distance += self.speed * dt / 3.6
         self.score = int(self.distance * 10)
-        self.player.update(dt, bounds, self.road)
+
         self.road.update(dt, self.speed, screen_size[1])
+
         player_rect = self.player.rect(screen_size[1])
-        self.traffic.update(dt, self.speed, screen_size[1], player_rect)
+
+        self.traffic.update(
+            dt,
+            self.speed,
+            screen_size[1],
+            player_rect,
+        )
+
         if detect_collision(
             player_rect,
             self.traffic.cars,
@@ -803,7 +815,22 @@ class GestureInferenceAdapter:
                             points /= scale
                         features = points.flatten().reshape(1, -1)
                         probabilities = getattr(model, "predict_proba", lambda _features: [[0]])(features)
-                        label = str(model.predict(features)[0]).upper()
+                        raw_label = model.predict(features)[0]
+                        gesture_names = (
+                            "FIST",
+                            "LEFT_DIR",
+                            "PALM",
+                            "RIGHT_DIR",
+                        )
+                        if isinstance(raw_label, (int, np.integer)):
+                            index = int(raw_label)
+                            label = (
+                                gesture_names[index]
+                                if 0 <= index < len(gesture_names)
+                                else "UNKNOWN"
+                            )
+                        else:
+                            label = str(raw_label).upper()
                         confidence = float(max(probabilities[0])) if len(probabilities) else 0.0
                         prediction = GesturePrediction(label, confidence, time.monotonic())
                     try:
@@ -818,13 +845,16 @@ class GestureInferenceAdapter:
             self.status = f"Inference error: {exc}"
 
 
+
 class GestureCommandMapper:
-    """Map actual model labels to commands with neutral-state edge detection."""
+    """PALM starts driving; only FIST stops driving."""
 
     LABEL_ALIASES = {
         "PALM": "PALM",
         "OPEN_PALM": "PALM",
         "FIST": "FIST",
+        "LEFT_DIR": "RIGHT",
+        "RIGHT_DIR": "LEFT",
         "LEFT": "LEFT",
         "RIGHT": "RIGHT",
         "UNKNOWN": "UNKNOWN",
@@ -832,43 +862,74 @@ class GestureCommandMapper:
         "NONE": "UNKNOWN",
     }
 
-    def __init__(self, speed_step: float = SPEED_STEP, confidence_threshold: float = 0.60) -> None:
+    def __init__(
+        self,
+        speed_step: float = SPEED_STEP,
+        confidence_threshold: float = 0.60,
+    ) -> None:
         self.speed_step = speed_step
         self.confidence_threshold = confidence_threshold
-        self.last_accepted_label: str | None = None
+        self.last_accepted_label = None
 
-    def map_prediction(self, scene: DrivingScene, prediction: GesturePrediction) -> bool:
+    def map_prediction(
+        self,
+        scene: DrivingScene,
+        prediction: GesturePrediction,
+    ) -> bool:
+
+        label = self.LABEL_ALIASES.get(
+            str(prediction.label).upper(),
+            "UNKNOWN",
+        )
+
         if prediction.confidence < self.confidence_threshold:
             label = "UNKNOWN"
-        else:
-            label = self.LABEL_ALIASES.get(str(prediction.label).upper(), "UNKNOWN")
 
-        if label in ("UNKNOWN", "NONE"):
+        # UNKNOWN does not stop the car.
+        # It only resets the directional gesture latch.
+        if label == "UNKNOWN":
             self.last_accepted_label = None
             return False
-        if label == self.last_accepted_label:
-            return False
 
+        # FIST is the only gesture that stops the car.
         if label == "FIST":
+            scene.set_speed(MIN_SPEED)
+
+            if scene.state is GameState.RUNNING:
+                scene.state_manager.transition_to(
+                    GameState.STOPPED
+                )
+
+        # PALM starts or resumes driving.
+        elif label == "PALM":
             if scene.state is GameState.READY:
                 scene.start_game()
-                scene.set_speed(self.speed_step)
+
             elif scene.state is GameState.STOPPED:
-                scene.state_manager.transition_to(GameState.RUNNING)
-                scene.set_speed(self.speed_step)
-            elif scene.state is GameState.RUNNING:
-                scene.set_speed(scene.speed + self.speed_step)
-        elif label == "PALM":
+                scene.state_manager.transition_to(
+                    GameState.RUNNING
+                )
+
             if scene.state is GameState.RUNNING:
-                scene.set_target_speed(MIN_SPEED)
-                scene.speed = MIN_SPEED
-                scene.state_manager.transition_to(GameState.STOPPED)
+                scene.set_target_speed(MAX_SPEED * 0.5)
+
+        # LEFT changes lane without stopping.
         elif label == "LEFT":
-            if scene.state is GameState.RUNNING:
-                scene.player.move_left()
+            if label != self.last_accepted_label:
+                if scene.state in (
+                    GameState.RUNNING,
+                    GameState.STOPPED,
+                ):
+                    scene.player.move_left()
+
+        # RIGHT changes lane without stopping.
         elif label == "RIGHT":
-            if scene.state is GameState.RUNNING:
-                scene.player.move_right()
+            if label != self.last_accepted_label:
+                if scene.state in (
+                    GameState.RUNNING,
+                    GameState.STOPPED,
+                ):
+                    scene.player.move_right()
 
         self.last_accepted_label = label
         return True
