@@ -1,15 +1,4 @@
-# Python
 .venv/
+.venv-tensorflow/
 __pycache__/
 *.pyc
-
-# Collected and downloaded datasets; keep placeholder files.
-**/dataset/raw/**
-!**/dataset/raw/**/
-!**/dataset/raw/**/.gitkeep
-**/dataset/webcam/**
-!**/dataset/webcam/**/
-!**/dataset/webcam/**/.gitkeep
-**/dataset/downloads/**
-!**/dataset/downloads/**/
-!**/dataset/downloads/**/.gitkeep
