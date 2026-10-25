@@ -1,0 +1,20 @@
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677639662859900.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677639746084600.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677639780804800.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677640179957900 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646446895900 - コピー - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646446895900 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646484188000 - コピー - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646484188000 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646514933900 - コピー - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646514933900 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646549224200 - コピー - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677646549224200 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677649189080500 - コピー - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792677649189080500 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792685062955020700 - コピー - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792685062955020700 - コピー.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792685063811342400.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\fist\1792685063877768800.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\right_dir\1792685088659440600.png
+C:\Users\htunn\hand_gesture_driving_simulator\ai-dataset\processed-dataset\right_dir\1792685088697575700.png
