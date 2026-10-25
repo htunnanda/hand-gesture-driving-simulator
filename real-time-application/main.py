@@ -1,3 +1,4 @@
+
 """Minimal two-lane Pygame driving scene."""
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ MAX_SPEED = 100.0
 SPEED_STEP = 10.0
 ACCELERATION_RATE = 24.0
 BRAKING_RATE = 38.0
-LANE_RESPONSE = 12.0
+LANE_RESPONSE = 25.0
 MAX_STEERING_TILT_DEGREES = 8.0
 PIXELS_PER_SPEED_UNIT = 3.0
 LANE_DASH_HEIGHT = 30
@@ -731,7 +732,7 @@ class GestureInferenceAdapter:
     def __init__(
         self,
         model_path: Path,
-        confidence_threshold: float = 0.60,
+        confidence_threshold: float = 0.50,
         camera_index: int = 0,
     ) -> None:
         self.model_path = model_path
@@ -846,17 +847,38 @@ class GestureInferenceAdapter:
 
 
 
+
+
 class GestureCommandMapper:
-    """PALM starts driving; only FIST stops driving."""
+    """
+    Gesture driving controller.
+
+    PALM:
+        Start or resume driving.
+
+    LEFT_DIR / RIGHT_DIR:
+        Change one lane immediately without stopping.
+
+    FIST:
+        Stop only after a sustained, confident detection.
+
+    UNKNOWN:
+        Keep the current driving state.
+    """
 
     LABEL_ALIASES = {
         "PALM": "PALM",
         "OPEN_PALM": "PALM",
         "FIST": "FIST",
+
+        # Camera mirror correction:
+        # Keep the mapping that worked on this device.
         "LEFT_DIR": "RIGHT",
         "RIGHT_DIR": "LEFT",
+
         "LEFT": "LEFT",
         "RIGHT": "RIGHT",
+
         "UNKNOWN": "UNKNOWN",
         "NO_HAND": "UNKNOWN",
         "NONE": "UNKNOWN",
@@ -865,11 +887,31 @@ class GestureCommandMapper:
     def __init__(
         self,
         speed_step: float = SPEED_STEP,
-        confidence_threshold: float = 0.60,
+        confidence_threshold: float = 0.45,
     ) -> None:
         self.speed_step = speed_step
+
+        # Low threshold for responsive lane changes.
         self.confidence_threshold = confidence_threshold
-        self.last_accepted_label = None
+
+        # Separate, stricter FIST confirmation.
+        self.fist_confidence = 0.80
+        self.fist_hold_seconds = 0.65
+        self.fist_min_frames = 4
+
+        self.fist_started_at = None
+        self.fist_last_seen_at = None
+        self.fist_frames = 0
+
+        # Prevent repeated lane changes from one held gesture.
+        self.last_direction = None
+        self.last_lane_change_at = 0.0
+        self.lane_cooldown = 0.18
+
+    def reset_fist(self) -> None:
+        self.fist_started_at = None
+        self.fist_last_seen_at = None
+        self.fist_frames = 0
 
     def map_prediction(
         self,
@@ -877,31 +919,81 @@ class GestureCommandMapper:
         prediction: GesturePrediction,
     ) -> bool:
 
+        now = time.monotonic()
+
         label = self.LABEL_ALIASES.get(
             str(prediction.label).upper(),
             "UNKNOWN",
         )
 
-        if prediction.confidence < self.confidence_threshold:
+        confidence = float(prediction.confidence)
+
+        if confidence < self.confidence_threshold:
             label = "UNKNOWN"
 
-        # UNKNOWN does not stop the car.
-        # It only resets the directional gesture latch.
-        if label == "UNKNOWN":
-            self.last_accepted_label = None
+        # ----------------------------------------
+        # FIST: deliberate stop only
+        # ----------------------------------------
+        if label == "FIST":
+
+            self.last_direction = None
+
+            if confidence < self.fist_confidence:
+                self.reset_fist()
+                return False
+
+            if (
+                self.fist_last_seen_at is not None
+                and now - self.fist_last_seen_at > 0.20
+            ):
+                self.reset_fist()
+
+            if self.fist_started_at is None:
+                self.fist_started_at = now
+
+            self.fist_last_seen_at = now
+            self.fist_frames += 1
+
+            held_long_enough = (
+                now - self.fist_started_at
+                >= self.fist_hold_seconds
+            )
+
+            enough_frames = (
+                self.fist_frames >= self.fist_min_frames
+            )
+
+            if held_long_enough and enough_frames:
+
+                if scene.state is GameState.RUNNING:
+                    scene.set_speed(MIN_SPEED)
+
+                    scene.state_manager.transition_to(
+                        GameState.STOPPED
+                    )
+
+                return True
+
+            # A brief FIST prediction must not stop the car.
             return False
 
-        # FIST is the only gesture that stops the car.
-        if label == "FIST":
-            scene.set_speed(MIN_SPEED)
+        # Any non-FIST gesture cancels a pending stop.
+        self.reset_fist()
 
-            if scene.state is GameState.RUNNING:
-                scene.state_manager.transition_to(
-                    GameState.STOPPED
-                )
+        # ----------------------------------------
+        # UNKNOWN: keep driving
+        # ----------------------------------------
+        if label == "UNKNOWN":
+            self.last_direction = None
+            return False
 
-        # PALM starts or resumes driving.
-        elif label == "PALM":
+        # ----------------------------------------
+        # PALM: latch driving ON
+        # ----------------------------------------
+        if label == "PALM":
+
+            self.last_direction = None
+
             if scene.state is GameState.READY:
                 scene.start_game()
 
@@ -911,28 +1003,47 @@ class GestureCommandMapper:
                 )
 
             if scene.state is GameState.RUNNING:
-                scene.set_target_speed(MAX_SPEED * 0.5)
+                scene.set_target_speed(
+                    MAX_SPEED * 0.5
+                )
 
-        # LEFT changes lane without stopping.
-        elif label == "LEFT":
-            if label != self.last_accepted_label:
-                if scene.state in (
-                    GameState.RUNNING,
-                    GameState.STOPPED,
-                ):
-                    scene.player.move_left()
+            return True
 
-        # RIGHT changes lane without stopping.
-        elif label == "RIGHT":
-            if label != self.last_accepted_label:
-                if scene.state in (
-                    GameState.RUNNING,
-                    GameState.STOPPED,
-                ):
-                    scene.player.move_right()
+        # ----------------------------------------
+        # LEFT / RIGHT: immediate lane movement
+        # ----------------------------------------
+        if label in ("LEFT", "RIGHT"):
 
-        self.last_accepted_label = label
-        return True
+            # Never change RUNNING to STOPPED here.
+            # A deliberate FIST is required to stop.
+
+            if label == self.last_direction:
+                return True
+
+            # Remember the direction so a held gesture
+            # cannot jump across multiple lanes.
+            self.last_direction = label
+
+            if scene.state is not GameState.RUNNING:
+                return False
+
+            if (
+                now - self.last_lane_change_at
+                < self.lane_cooldown
+            ):
+                return False
+
+            if label == "LEFT":
+                moved = scene.player.move_left()
+            else:
+                moved = scene.player.move_right()
+
+            if moved:
+                self.last_lane_change_at = now
+
+            return moved
+
+        return False
 
 
 class GameRenderer:
@@ -1474,7 +1585,7 @@ def run_game() -> None:
     pygame.display.set_caption("Three-Lane Hand Gesture Driving Simulator")
 
     scene = DrivingScene()
-    mapper = GestureCommandMapper()
+    mapper = GestureCommandMapper(confidence_threshold=0.45)
     model_path = Path(__file__).resolve().parents[1] / "machine_learning" / "models" / "gesture_model.pkl"
     inference = GestureInferenceAdapter(model_path)
     inference.start()
