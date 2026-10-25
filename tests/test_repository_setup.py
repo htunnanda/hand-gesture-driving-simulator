@@ -13,7 +13,7 @@ def test_required_documents_exist():
 
 def test_member_directories_exist():
     for name in (
-        'computer-vision', 'ai-dataset', 'machine-learning',
+        'computer-vision', 'ai-dataset', 'machine_learning',
         'control-algorithm', 'real-time-application', 'integration-testing',
     ):
         assert (ROOT / name / 'README.md').is_file(), name

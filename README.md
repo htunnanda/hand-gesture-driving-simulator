@@ -34,7 +34,9 @@ python -m pytest
 ```
 If PowerShell blocks activation, use `.\.venv\Scripts\python.exe` instead of `python`.
 
-**Status:** Repository foundation only. Game modules have not been implemented yet.
+**Status:** Member 5's keyboard/mock-command Pygame engine is implemented as a
+prototype. See [the game-engine module guide](real-time-application/README.md)
+for architecture, controls, integration, limitations, and test evidence.
 
 Read `docs/interfaces/README.md`, `docs/GIT_WORKFLOW.md`, and `docs/REPORTING.md` before development.
 
