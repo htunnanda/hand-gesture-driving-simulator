@@ -1,55 +1,15 @@
 # Python
-__pycache__/
-*.py[cod]
 .venv/
-venv/
-env/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-build/
-dist/
-*.egg-info/
+__pycache__/
+*.pyc
 
-# Secrets/local settings
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-
-# Generated / private data
-ai-dataset/data/
-machine-learning/models/*.pkl
-machine-learning/models/*.joblib
-machine-learning/models/*.onnx
-*.mp4
-*.avi
-*.mov
-
-# Unity legacy generated files
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-[Uu]ser[Ss]ettings/
-*.csproj
-*.sln
-*.user
-*.suo
-*.userprefs
-*.pidb
-*.booproj
-*.svclog
-*.pdb
-
-# IDE / OS
-.vs/
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
+# Collected and downloaded datasets; keep placeholder files.
+**/dataset/raw/**
+!**/dataset/raw/**/
+!**/dataset/raw/**/.gitkeep
+**/dataset/webcam/**
+!**/dataset/webcam/**/
+!**/dataset/webcam/**/.gitkeep
+**/dataset/downloads/**
+!**/dataset/downloads/**/
+!**/dataset/downloads/**/.gitkeep
