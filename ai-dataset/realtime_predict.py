@@ -38,7 +38,7 @@ with open(MODEL_DIR / "class_names.json", encoding="utf-8") as f:
     classes = json.load(f)
 
 print("Loading background removal model...")
-session = new_session("u2netp")
+session = new_session("u2net")
 
 print("Loading MediaPipe hand detector...")
 
