@@ -115,6 +115,17 @@ def camera_worker(args, state, stop):
             cv2.destroyAllWindows()
 
 
+def recovering_worker(args, state, stop):
+    """Retry startup after dependency errors or a disconnected camera."""
+    while not stop.is_set():
+        camera_worker(args, state, stop)
+        if stop.wait(3):
+            break
+        print('[gesture] Retrying camera/model startup...', flush=True)
+        state.update(gesture='UNKNOWN', confidence=0.0, camera='STARTING',
+                     model='STARTING', detail='Retrying camera/model startup', frame_time=0.0)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model', type=Path, default=Path(__file__).parent / 'machine_learning/models/gesture_model.pkl')
@@ -127,7 +138,7 @@ def main():
     state, stop = State(), threading.Event()
     worker = None
     if not args.demo:
-        worker = threading.Thread(target=camera_worker, args=(args, state, stop), daemon=True)
+        worker = threading.Thread(target=recovering_worker, args=(args, state, stop), daemon=True)
         worker.start()
     session, seq, start = uuid.uuid4().hex, 0, time.monotonic()
     print(f'UDP 127.0.0.1:{args.port} | {"SIMULATED" if args.demo else "WEBCAM"} | Ctrl+C to stop', flush=True)

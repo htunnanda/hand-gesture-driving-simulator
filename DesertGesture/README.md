@@ -47,7 +47,7 @@ Original inspected project: `C:/Users/yanpa/hand-gesture-driving-simulator`. Thi
 - `Unity/Assets/Editor/BuildProject.cs`: scene creation and Windows build.
 - `Python/test_bridge.py`, `Unity/Assets/Scripts/RuntimeSmoke.cs`: transport and runtime checks.
 
-To replace cars, assign visual prefabs on the Desert Signal scene object's `playerVisualPrefab` / `trafficVisualPrefab` fields. Use +Z forward, road-level origin, approximately 1.8 m width × 4 m length. Collision envelopes remain in game code. Scenery is generated in `Awake`; edit the factory there to replace mesas/cacti. Source art consists of original procedural primitives; car interiors, photoreal textures, post-processing, articulated wheels, advanced traffic AI and an embedded webcam panel are not included. Webcam preview is a separate OpenCV window. Current HUD uses scaled immediate-mode UI for a minimal dependency prototype.
+To replace cars, assign visual prefabs on the Desert Signal scene object's `playerVisualPrefab` / `trafficVisualPrefab` fields. Use +Z forward, road-level origin, approximately 1.8 m width × 4 m length. Collision envelopes remain in game code. Scenery is generated in `Awake`; edit the factory there to replace mesas/cacti. Source art consists of original procedural primitives; car interiors, photoreal textures, post-processing, advanced traffic AI and an embedded webcam panel are not included. Webcam preview is a separate OpenCV window. Current HUD uses scaled immediate-mode UI for a minimal dependency prototype.
 
 ## Transport
 
@@ -81,3 +81,17 @@ For the built-player smoke test, launch `Build/DesertSignal.exe -batchmode -nogr
 - **Pink materials:** use this built-in-renderer project rather than importing the scripts into a URP/HDRP template without adapting the Standard materials.
 
 Unity runtime initialization reference: https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/runtimeinitializeonloadmethodattribute
+
+## Sports-car visual update
+
+The player now uses an original orange Lamborghini-inspired wedge coupe with rounded procedural bodywork, a sloping glass canopy, metallic paint, Y-shaped rear lights, engine louvers, rear diffuser, twin exhausts and five-spoke rolling wheels. Traffic includes sports cars, sedans, cargo trucks and express coaches with separate dimensions and cruising speeds. The closer chase camera makes the car easier to see. No manufacturer logos or third-party model assets are included. The visual factory is `Unity/Assets/Scripts/SportsCarVisual.cs`; prefab overrides remain supported.
+
+## Brake effects and mixed traffic
+
+- Hold S/down/Space or show FIST: rear Y lamps and the centre stop strip brighten, red light falls onto the road and the body dips slightly under braking.
+- Braking above 35 km/h produces short, fading smoke trails at the rear tyres. Below that speed the emission stops; at standstill the brake lamps stay on while the brake is held. Pause, crash and reset clear smoke and lamps.
+- Traffic cycles between sports car, sedan, three-axle cargo truck and express bus. Detailed windows, cargo doors, coach livery, rolling wheels and tail lamps distinguish them. Cruising speeds vary by type; following vehicles slow for traffic ahead.
+- Truck and coach collision bounds include their full body length. Spawn spacing avoids an immediate three-lane wall. Traffic holds its lane; this remains an arcade driving prototype, not a full tyre/ABS/vehicle-physics simulation.
+- `VehicleEffects.cs` and `Resources/TyreSmoke.shader` implement brake/smoke feedback. `TrafficVehicle.cs` owns vehicle models, size and speeds. The existing generic traffic prefab override replaces the visuals; custom prefabs must match the selected type's dimensions.
+- Built-player regression check: `Build/DesertSignal.exe -batchmode -nographics --effects-test`. It exits with code 0 on success and writes `Build/effects-test.txt`.
+- Visual QA fixture: `Build/DesertSignal.exe --traffic-capture -force-d3d11`. It shows four vehicle types with braking active, saves `preview.png`, then exits. Normal play has no forced braking or fixture traffic.

@@ -15,7 +15,10 @@ public sealed class DesertGame : MonoBehaviour
     Transform player;
     Camera chase;
     readonly List<Transform> scenery = new List<Transform>();
-    readonly List<Transform> traffic = new List<Transform>();
+    readonly List<TrafficVehicle> traffic = new List<TrafficVehicle>();
+    public VehicleEffects Effects {get;private set;}
+    int trafficSequence;
+    bool braking, captureBrake;
     readonly Dictionary<Color,Material> materials = new Dictionary<Color,Material>();
     float spawnTimer, crashFlash, gestureReleased;
     int passed;
@@ -81,15 +84,17 @@ public sealed class DesertGame : MonoBehaviour
                 }
             }
         }
-        player = Car("Player", Mat(new Color(.02f,.67f,.77f)), playerVisualPrefab);
+        player = Car("Player", Mat(new Color(1f,.24f,.015f)), playerVisualPrefab);
+        Effects=player.gameObject.AddComponent<VehicleEffects>();
         audioSource = gameObject.AddComponent<AudioSource>();
         crashSound = AudioClip.Create("Procedural crash", 11025,1,22050,false);
         var samples=new float[11025];
         for(int i=0;i<samples.Length;i++) samples[i]=Random.Range(-1f,1f)*Mathf.Pow(1f-i/(float)samples.Length,3)*.4f;
         crashSound.SetData(samples,0);
         ResetRun();
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--effects-test") >= 0) gameObject.AddComponent<EffectsSmoke>();
         if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--smoke") >= 0) gameObject.AddComponent<RuntimeSmoke>();
-        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--capture") >= 0) gameObject.AddComponent<RuntimeCapture>();
+        if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--capture") >= 0 || System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "--traffic-capture") >= 0) gameObject.AddComponent<RuntimeCapture>();
     }
     Material Mat(Color color, bool glow=false)
     {
@@ -129,37 +134,21 @@ public sealed class DesertGame : MonoBehaviour
     {
         var root=new GameObject(name).transform;
         if(prefab!=null){Instantiate(prefab,root);return root;}
-        Part(root,"Body",new Vector3(0,.55f,0),new Vector3(1.8f,.5f,3.9f),paint);
-        Part(root,"Hood",new Vector3(0,.8f,1.0f),new Vector3(1.65f,.15f,1.6f),paint);
-        Part(root,"Glass canopy",new Vector3(0,1.04f,-.25f),new Vector3(1.42f,.6f,1.55f),dark);
-        Part(root,"Roof",new Vector3(0,1.36f,-.35f),new Vector3(1.46f,.07f,1.15f),paint);
-        Part(root,"Rear spoiler",new Vector3(0,1,-1.65f),new Vector3(1.95f,.12f,.25f),dark);
-        var red=Mat(new Color(1,.11f,.08f),true);
-        foreach(int side in new[]{-1,1})
-        {
-            Part(root,"Headlamp",new Vector3(side*.61f,.63f,1.96f),new Vector3(.4f,.14f,.04f),white);
-            Part(root,"Tail light",new Vector3(side*.6f,.65f,-1.96f),new Vector3(.5f,.14f,.04f),red);
-            foreach(float z in new[]{-1.2f,1.2f})
-            {
-                var wheel=GameObject.CreatePrimitive(PrimitiveType.Cylinder);wheel.name="Wheel";
-                wheel.transform.SetParent(root,false);wheel.transform.localPosition=new Vector3(side*.9f,.4f,z);
-                wheel.transform.localRotation=Quaternion.Euler(0,0,90);wheel.transform.localScale=new Vector3(.7f,.15f,.7f);
-                wheel.GetComponent<Renderer>().sharedMaterial=dark;Destroy(wheel.GetComponent<Collider>());
-            }
-        }
+        SportsCarVisual.Create(root,paint);
         return root;
     }
     public void ResetRun()
     {
         foreach(var t in traffic) Destroy(t.gameObject);traffic.Clear();
+        braking=false;captureBrake=false;trafficSequence=0;Effects.Apply(false,0,false);
         Lane=1;Speed=0;Distance=0;passed=0;spawnTimer=1.5f;State=Phase.Ready;
         heldSteer="UNKNOWN";gestureReleased=0;player.position=Vector3.zero;player.rotation=Quaternion.identity;
     }
     public void StartRun(){if(State==Phase.Ready)State=Phase.Driving;}
     public void ChangeLane(int direction){if(State==Phase.Driving)Lane=Mathf.Clamp(Lane+direction,0,2);}
-    public void Crash(){if(State!=Phase.Driving)return;State=Phase.Crashed;Speed=0;crashFlash=1;audioSource.PlayOneShot(crashSound);}
-    public static bool Overlaps(float playerX,float trafficX,float oldZ,float newZ)
-    {return Mathf.Abs(trafficX-playerX)<1.65f && Mathf.Min(oldZ,newZ)<3.6f && Mathf.Max(oldZ,newZ)>-3.6f;}
+    public void Crash(){if(State!=Phase.Driving)return;State=Phase.Crashed;braking=false;Effects.Apply(false,0,false);Speed=0;crashFlash=1;audioSource.PlayOneShot(crashSound);}
+    public static bool Overlaps(float playerX,float trafficX,float oldZ,float newZ,float halfWidth=.82f,float halfLength=1.6f)
+    {float length=2+halfLength;return Mathf.Abs(trafficX-playerX)<.83f+halfWidth && Mathf.Min(oldZ,newZ)<length && Mathf.Max(oldZ,newZ)>-length;}
     public void StepSpeed(float dt, bool brake, bool boost)
     {Speed=Mathf.MoveTowards(Speed,brake?0:boost?145:85,(brake?95:35)*dt);}
     void Update()
@@ -171,7 +160,7 @@ public sealed class DesertGame : MonoBehaviour
         if(Input.GetKeyDown(KeyCode.Return)||g=="PALM")StartRun();
         if(Input.GetKeyDown(KeyCode.P)||Input.GetKeyDown(KeyCode.Escape))
         {if(State==Phase.Driving)State=Phase.Paused;else if(State==Phase.Paused)State=Phase.Driving;}
-        if(State!=Phase.Driving)return;
+        if(State!=Phase.Driving){braking=false;Effects.Apply(false,0,false);return;}
         if(g=="UNKNOWN") {gestureReleased+=dt;if(gestureReleased>.3f)heldSteer="UNKNOWN";}
         else
         {
@@ -181,36 +170,76 @@ public sealed class DesertGame : MonoBehaviour
         }
         if(Input.GetKeyDown(KeyCode.LeftArrow)||Input.GetKeyDown(KeyCode.A))ChangeLane(-1);
         if(Input.GetKeyDown(KeyCode.RightArrow)||Input.GetKeyDown(KeyCode.D))ChangeLane(1);
-        bool brake=Input.GetKey(KeyCode.S)||Input.GetKey(KeyCode.DownArrow)||Input.GetKey(KeyCode.Space)||g=="FIST";
+        bool brake=Input.GetKey(KeyCode.S)||Input.GetKey(KeyCode.DownArrow)||Input.GetKey(KeyCode.Space)||g=="FIST"||captureBrake;
         bool boost=Input.GetKey(KeyCode.W)||Input.GetKey(KeyCode.UpArrow)||g=="PALM";
-        StepSpeed(dt,brake,boost);float advance=Speed/3.6f*dt;Distance+=advance;
+        float speedBefore=Speed;braking=brake;
+        StepSpeed(dt,brake,boost);Effects.Apply(brake,speedBefore);float advance=Speed/3.6f*dt;Distance+=advance;
+        player.GetComponent<SportsCarVisual>()?.Roll(advance);
         float target=(Lane-1)*3.3f, delta=target-player.position.x;
         player.position=Vector3.Lerp(player.position,new Vector3(target,0,0),1-Mathf.Exp(-9*dt));
-        player.rotation=Quaternion.Slerp(player.rotation,Quaternion.Euler(0,delta*4,-delta*2),1-Mathf.Exp(-8*dt));
+        player.rotation=Quaternion.Slerp(player.rotation,Quaternion.Euler(brake&&Speed>5?2.5f:0,delta*4,-delta*2),1-Mathf.Exp(-8*dt));
         foreach(var t in scenery){t.position-=Vector3.forward*advance;if(t.position.z < -40)t.position+=Vector3.forward*440;}
         spawnTimer-=dt;
         if(spawnTimer<=0 && Speed>10){SpawnTraffic();spawnTimer=Random.Range(2f,3.3f);}
+        // Front-to-back order allows a follower to brake for a slower vehicle ahead.
+        traffic.Sort((a,b)=>b.transform.position.z.CompareTo(a.transform.position.z));
+        for(int i=0;i<traffic.Count;i++)
+        {
+            var car=traffic[i];float targetSpeed=car.Cruise;
+            for(int j=0;j<i;j++)
+            {
+                var lead=traffic[j];
+                if(Mathf.Abs(lead.transform.position.x-car.transform.position.x)>1)continue;
+                float gap=lead.transform.position.z-car.transform.position.z-lead.HalfLength-car.HalfLength;
+                targetSpeed=Mathf.Min(targetSpeed,FollowingSpeed(car.Cruise,lead.Speed,gap));
+            }
+            bool trafficBrake=targetSpeed<car.Speed-.3f;
+            car.Speed=Mathf.MoveTowards(car.Speed,targetSpeed,(trafficBrake?9:2)*dt);
+            car.Animate(dt,trafficBrake);
+        }
         for(int i=traffic.Count-1;i>=0;i--)
         {
-            var t=traffic[i];float oldZ=t.position.z;t.position+=Vector3.forward*(12-Speed/3.6f)*dt;
-            // Swept longitudinal bounds avoid tunnelling on frame-rate drops.
-            if(Overlaps(player.position.x,t.position.x,oldZ,t.position.z))Crash();
-            if(t.position.z < -18 || t.position.z>210){if(t.position.z < -18)passed++;Destroy(t.gameObject);traffic.RemoveAt(i);}
+            var car=traffic[i];var t=car.transform;float oldZ=t.position.z;
+            t.position+=Vector3.forward*(car.Speed-Speed/3.6f)*dt;
+            if(Overlaps(player.position.x,t.position.x,oldZ,t.position.z,car.HalfWidth,car.HalfLength))Crash();
+            if(t.position.z < -18-car.HalfLength || t.position.z>210){if(t.position.z < -18)passed++;Destroy(car.gameObject);traffic.RemoveAt(i);}
         }
+    }
+    public static float FollowingSpeed(float cruise,float leadSpeed,float gap)
+    {return Mathf.Min(cruise,Mathf.Max(0,leadSpeed+(gap-12)/1.8f));}
+    TrafficVehicle CreateTraffic(TrafficVehicle.Kind kind,int lane,float z)
+    {
+        Color[] colors={new Color(.15f,.65f,.35f),new Color(.2f,.42f,.8f),new Color(.9f,.42f,.12f),new Color(.15f,.45f,.65f)};
+        var root=new GameObject(kind.ToString());var car=root.AddComponent<TrafficVehicle>();
+        car.Build(kind,Mat(colors[(int)kind]),trafficVisualPrefab);
+        root.transform.position=new Vector3((lane-1)*3.3f,0,z);traffic.Add(car);return car;
     }
     void SpawnTraffic()
     {
-        int lane=Random.Range(0,3);
-        foreach(var t in traffic)if(Mathf.Abs(t.position.x-(lane-1)*3.3f)<1 && t.position.z>95)return;
-        Color[] colors={new Color(.95f,.32f,.12f),new Color(.9f,.75f,.25f),new Color(.46f,.38f,.75f),new Color(.8f,.86f,.85f)};
-        var car=Car("Traffic",Mat(colors[Random.Range(0,colors.Length)]),trafficVisualPrefab);
-        car.position=new Vector3((lane-1)*3.3f,0,140);traffic.Add(car);
+        int lane=Random.Range(0,3),nearSpawn=0;
+        foreach(var car in traffic)
+        {
+            if(car.transform.position.z>108)nearSpawn++;
+            if(Mathf.Abs(car.transform.position.x-(lane-1)*3.3f)<1 && car.transform.position.z>92)return;
+        }
+        if(nearSpawn>=2)return; // Avoid creating a three-wide wall at the spawn point.
+        CreateTraffic((TrafficVehicle.Kind)(trafficSequence++%4),lane,140);
+    }
+    public void PrepareTrafficPreview()
+    {
+        if(System.Array.IndexOf(System.Environment.GetCommandLineArgs(),"--traffic-capture")<0)return;
+        ResetRun();keyboardOnly=true;StartRun();Speed=110;spawnTimer=100;
+        CreateTraffic(TrafficVehicle.Kind.ExpressBus,0,17);
+        CreateTraffic(TrafficVehicle.Kind.Truck,2,26);
+        CreateTraffic(TrafficVehicle.Kind.Sedan,1,43);
+        CreateTraffic(TrafficVehicle.Kind.Sports,0,55);
+        captureBrake=true;
     }
     void LateUpdate()
     {
         float dt=Time.deltaTime;
-        chase.transform.position=Vector3.Lerp(chase.transform.position,new Vector3(player.position.x*.32f,5.1f,-9.3f),1-Mathf.Exp(-4*dt));
-        chase.fieldOfView=Mathf.Lerp(chase.fieldOfView,63+Speed*.07f,1-Mathf.Exp(-3*dt));
+        chase.transform.position=Vector3.Lerp(chase.transform.position,new Vector3(player.position.x*.32f,3.7f,-7.4f),1-Mathf.Exp(-4*dt));
+        chase.fieldOfView=Mathf.Lerp(chase.fieldOfView,58+Speed*.035f,1-Mathf.Exp(-3*dt));
         chase.transform.LookAt(new Vector3(player.position.x*.45f,1,16));
     }
     void OnDestroy(){foreach(var m in materials.Values)Destroy(m);if(crashSound!=null)Destroy(crashSound);}
@@ -228,6 +257,7 @@ public sealed class DesertGame : MonoBehaviour
     {
         Styles();GUI.matrix=Matrix4x4.TRS(Vector3.zero,Quaternion.identity,new Vector3(Screen.width/1280f,Screen.height/720f,1));
         Panel(new Rect(28,25,290,122));Label(46,37,"DESERT SIGNAL  /  01",title);Label(46,70,Speed.ToString("000")+"  km/h",large);
+        if(braking){GUI.color=new Color(1,.22f,.09f);GUI.Label(new Rect(46,149,280,30),"BRAKING / STOP LAMPS ON",small);GUI.color=Color.white;}
         Panel(new Rect(998,25,254,122));Label(1018,36,"DISTANCE / SCORE",small);Label(1018,66,Score.ToString("000000"),large);
         Panel(new Rect(28,548,362,145));Label(46,560,"GESTURE  /  "+(keyboardOnly?"KEYBOARD":receiver.Gesture),title);
         var packet=receiver.Packet;bool connected=receiver.Connected;

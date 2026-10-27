@@ -5,10 +5,29 @@ import subprocess
 import sys
 import time
 import unittest
+from unittest.mock import patch
+import threading
+from bridge import recovering_worker
 from bridge import State, Stabilizer, normalize
 
 
 class BridgeTests(unittest.TestCase):
+    def test_recovers_from_startup_failure(self):
+        stop=threading.Event()
+        state=State()
+        calls=[]
+        def worker(args, state, stop):
+            calls.append(1)
+            if len(calls)==1:
+                state.update(camera='OFFLINE', model='ERROR', detail="No module named 'cv2'")
+            else:
+                state.update(camera='ONLINE', model='ONLINE', frame_time=time.monotonic())
+                stop.set()
+        with patch('bridge.camera_worker', side_effect=worker), patch.object(stop,'wait',side_effect=lambda _:stop.is_set()):
+            recovering_worker(None,state,stop)
+        self.assertEqual(len(calls),2)
+        self.assertEqual(state.snapshot()['model'],'ONLINE')
+
     def test_labels_and_loss(self):
         self.assertEqual([normalize(i) for i in range(4)], ['FIST','LEFT','PALM','RIGHT'])
         stable = Stabilizer()

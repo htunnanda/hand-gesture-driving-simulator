@@ -10,3 +10,7 @@
 - Gameplay rendered with Direct3D 11 and was visually inspected at 1280×720. `preview.png` is an actual game frame. Camera/model are OFFLINE in this keyboard-only screenshot by design.
 
 Limitations: procedural placeholder cars and scenery; no licensed third-party models; arcade collision envelope rather than full vehicle physics; camera preview is in a separate OpenCV window. Live gesture accuracy, extended play balance and testing on other computers remain unverified.
+
+Sports-car update: Unity build succeeded; updated rear gameplay view visually inspected; built-player mechanics, all UDP gestures and stale timeout passed again. Original procedural wedge body, rolling alloy wheels and closer chase camera added.
+
+Brake/mixed-traffic update: Unity build succeeded. Built-player assertions passed for brake lamps, no smoke at standstill, brake release, reset cleanup, coach/truck swept collision bounds, follower slowing and all four procedural vehicle types. Direct3D 11 gameplay preview visually checked for brake lamps, tyre smoke, sedan, sports car, cargo truck and express bus. Smoke is a stylized hard-braking effect, not a tyre physics simulation.
