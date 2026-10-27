@@ -1,0 +1,8 @@
+Unity/Library/
+Unity/Temp/
+Unity/Logs/
+Unity/obj/
+Unity/UserSettings/
+Python/.venv/
+**/__pycache__/
+Build/
