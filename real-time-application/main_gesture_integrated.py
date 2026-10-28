@@ -749,8 +749,8 @@ class GestureInferenceAdapter:
             import cv2
             import mediapipe as mp
             import joblib
-        except Exception:
-            self.status = "Missing OpenCV, MediaPipe, or joblib"
+        except (ImportError, OSError) as exc:
+            self.status = f"Dependency import error: {exc}"
             return False
 
         if not self.model_path.is_file():

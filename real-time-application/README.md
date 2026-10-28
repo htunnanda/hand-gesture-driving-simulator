@@ -53,6 +53,20 @@ Alternatively, install the repository's full dependency set with
 `python -m pip install -r requirements.txt`. The game window starts in READY.
 Press Enter or Space to begin.
 
+## Gesture-integrated launch
+
+To run the webcam and model integration, install the repository dependencies
+and launch the integrated entry point from the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe real-time-application\main_gesture_integrated.py
+```
+
+This entry point loads `machine_learning\models\gesture_model.pkl` and opens
+camera index 0. Use the same virtual-environment interpreter for installation
+and launch so the camera, MediaPipe, and model dependencies are available.
+
 ## Keyboard controls
 
 | Input | Action |
